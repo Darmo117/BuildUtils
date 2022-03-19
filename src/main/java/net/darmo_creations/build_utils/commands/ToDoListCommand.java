@@ -4,6 +4,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
@@ -18,7 +19,6 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.advancements.critereon.MinMaxBounds;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
-import net.minecraft.commands.arguments.MessageArgument;
 import net.minecraft.commands.arguments.RangeArgument;
 import net.minecraft.network.chat.TextComponent;
 import net.minecraft.network.chat.TranslatableComponent;
@@ -82,14 +82,14 @@ public class ToDoListCommand {
         .then(Commands.literal("clear")
             .executes(context -> clearList(context, global)))
         .then(Commands.literal("add")
-            .then(Commands.argument(TEXT_ARG, MessageArgument.message())
+            .then(Commands.argument(TEXT_ARG, StringArgumentType.greedyString())
                 .executes(context -> {
                   addItem(context, global, false);
                   return 1;
                 })))
         .then(Commands.literal("insert")
             .then(Commands.argument(INDEX_ARG, IntegerArgumentType.integer(1))
-                .then(Commands.argument(TEXT_ARG, MessageArgument.message())
+                .then(Commands.argument(TEXT_ARG, StringArgumentType.greedyString())
                     .executes(context -> {
                       addItem(context, global, true);
                       return 1;
@@ -101,7 +101,7 @@ public class ToDoListCommand {
                 .executes(context -> removeItems(context, global, false))))
         .then(Commands.literal("edit")
             .then(Commands.argument(INDEX_ARG, IntegerArgumentType.integer(1))
-                .then(Commands.argument(TEXT_ARG, MessageArgument.message())
+                .then(Commands.argument(TEXT_ARG, StringArgumentType.greedyString())
                     .executes(context -> {
                       setItemText(context, global);
                       return 1;
@@ -220,7 +220,7 @@ public class ToDoListCommand {
     Pair<String, ToDoList> data = getList(context, global);
     String playerName = data.getLeft();
     ToDoList list = data.getRight();
-    String text = MessageArgument.getMessage(context, TEXT_ARG).getContents();
+    String text = StringArgumentType.getString(context, TEXT_ARG);
     boolean added;
     if (insert) {
       int index = Math.min(list.size(), IntegerArgumentType.getInteger(context, INDEX_ARG) - 1);
@@ -322,7 +322,7 @@ public class ToDoListCommand {
     if (index >= list.size()) {
       throw OUT_OF_BOUNDS_ERROR.create(index + 1);
     }
-    String text = MessageArgument.getMessage(context, TEXT_ARG).getContents();
+    String text = StringArgumentType.getString(context, TEXT_ARG);
     list.setText(index, text);
     if (!list.isVisible()) {
       TranslatableComponent component;

@@ -1,6 +1,7 @@
 package net.darmo_creations.build_utils.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
@@ -13,7 +14,6 @@ import net.darmo_creations.build_utils.calculator.Calculator;
 import net.darmo_creations.build_utils.calculator.Function;
 import net.darmo_creations.build_utils.calculator.exceptions.*;
 import net.darmo_creations.build_utils.calculator.nodes.StatementResult;
-import net.darmo_creations.build_utils.commands.argument_types.CalculatorExpressionArgument;
 import net.darmo_creations.build_utils.commands.argument_types.CalculatorVariableNameArgument;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
@@ -112,7 +112,7 @@ public class CalculatorCommand {
                 .then(Commands.argument(LIST_TYPE_ARG, EnumArgument.enumArgument(StructureTypes.class))
                     .executes(context -> list(context, global)))))
         // Evaluate expression
-        .then(Commands.argument(EXPRESSION_ARG, CalculatorExpressionArgument.expression())
+        .then(Commands.argument(EXPRESSION_ARG, StringArgumentType.greedyString())
             .executes(context -> {
               evaluate(context, global);
               return 1;
@@ -263,7 +263,7 @@ public class CalculatorCommand {
    * @param global  Whether to use the global or player calculator.
    */
   private static void evaluate(final CommandContext<CommandSourceStack> context, final boolean global) throws CommandSyntaxException {
-    String expression = CalculatorExpressionArgument.getExpression(context, EXPRESSION_ARG);
+    String expression = StringArgumentType.getString(context, EXPRESSION_ARG);
     Calculator calculator = getCalculator(context, global).getRight();
     StatementResult result = null;
     CommandSyntaxException exception = null;
