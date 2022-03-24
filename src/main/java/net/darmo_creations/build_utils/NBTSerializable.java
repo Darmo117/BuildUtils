@@ -1,6 +1,6 @@
 package net.darmo_creations.build_utils;
 
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.CompoundNBT;
 
 /**
  * Enables serialization and deserialization of objects into and from NBT tags.
@@ -11,12 +11,12 @@ public interface NBTSerializable {
    *
    * @return The serialized data.
    */
-  CompoundTag writeToNBT();
+  CompoundNBT writeToNBT();
 
   /**
    * Update this object using data in the given tag.
    *
    * @param tag The data to deserialize.
    */
-  void readFromNBT(CompoundTag tag);
+  void readFromNBT(CompoundNBT tag);
 }

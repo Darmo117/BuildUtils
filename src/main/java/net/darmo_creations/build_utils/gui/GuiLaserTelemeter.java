@@ -1,18 +1,18 @@
 package net.darmo_creations.build_utils.gui;
 
-import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.matrix.MatrixStack;
 import net.darmo_creations.build_utils.BuildUtils;
 import net.darmo_creations.build_utils.Utils;
 import net.darmo_creations.build_utils.network.PacketLaserTelemeterData;
 import net.darmo_creations.build_utils.tile_entities.TileEntityLaserTelemeter;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.Vec3i;
-import net.minecraft.network.chat.TranslatableComponent;
+import net.minecraft.client.gui.FontRenderer;
+import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.widget.TextFieldWidget;
+import net.minecraft.client.gui.widget.button.Button;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.vector.Vector3i;
+import net.minecraft.util.text.TranslationTextComponent;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
@@ -22,16 +22,16 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 @OnlyIn(Dist.CLIENT)
 public class GuiLaserTelemeter extends Screen {
   // Widgets
-  private EditBox lengthXTextField;
-  private EditBox lengthYTextField;
-  private EditBox lengthZTextField;
-  private EditBox xOffsetTextField;
-  private EditBox yOffsetTextField;
-  private EditBox zOffsetTextField;
+  private TextFieldWidget lengthXTextField;
+  private TextFieldWidget lengthYTextField;
+  private TextFieldWidget lengthZTextField;
+  private TextFieldWidget xOffsetTextField;
+  private TextFieldWidget yOffsetTextField;
+  private TextFieldWidget zOffsetTextField;
 
   // Data
   private final TileEntityLaserTelemeter tileEntity;
-  private final Vec3i size;
+  private final Vector3i size;
   private final BlockPos offset;
 
   // Layout
@@ -46,10 +46,10 @@ public class GuiLaserTelemeter extends Screen {
    * @param tileEntity The tile entity.
    */
   public GuiLaserTelemeter(TileEntityLaserTelemeter tileEntity) {
-    super(new TranslatableComponent("gui.build_utils.laser_telemeter.title"));
+    super(new TranslationTextComponent("gui.build_utils.laser_telemeter.title"));
     this.tileEntity = tileEntity;
-    this.size = tileEntity.getBoxSize();
-    this.offset = tileEntity.getBoxOffset();
+    this.size = tileEntity.getSize();
+    this.offset = tileEntity.getOffset();
   }
 
   @Override
@@ -63,45 +63,45 @@ public class GuiLaserTelemeter extends Screen {
 
     //noinspection ConstantConditions
     this.xOffsetTextField = this.addWidget(
-        new EditBox(this.minecraft.font, (int) (middle - btnW * 1.5), y, btnW, BUTTON_HEIGHT, null));
+        new TextFieldWidget(this.minecraft.font, (int) (middle - btnW * 1.5), y, btnW, BUTTON_HEIGHT, null));
     this.xOffsetTextField.setValue("" + this.offset.getX());
     //noinspection ConstantConditions
     this.yOffsetTextField = this.addWidget(
-        new EditBox(this.minecraft.font, middle - btnW / 2, y, btnW, BUTTON_HEIGHT, null));
+        new TextFieldWidget(this.minecraft.font, middle - btnW / 2, y, btnW, BUTTON_HEIGHT, null));
     this.yOffsetTextField.setValue("" + this.offset.getY());
     //noinspection ConstantConditions
     this.zOffsetTextField = this.addWidget(
-        new EditBox(this.minecraft.font, middle + btnW / 2, y, btnW, BUTTON_HEIGHT, null));
+        new TextFieldWidget(this.minecraft.font, middle + btnW / 2, y, btnW, BUTTON_HEIGHT, null));
     this.zOffsetTextField.setValue("" + this.offset.getZ());
 
     y += BUTTON_HEIGHT * 3 + MARGIN + this.font.lineHeight + 1;
 
     //noinspection ConstantConditions
     this.lengthXTextField = this.addWidget(
-        new EditBox(this.minecraft.font, (int) (middle - btnW * 1.5), y, btnW, BUTTON_HEIGHT, null));
+        new TextFieldWidget(this.minecraft.font, (int) (middle - btnW * 1.5), y, btnW, BUTTON_HEIGHT, null));
     this.lengthXTextField.setValue("" + this.size.getX());
     //noinspection ConstantConditions
     this.lengthYTextField = this.addWidget(
-        new EditBox(this.minecraft.font, middle - btnW / 2, y, btnW, BUTTON_HEIGHT, null));
+        new TextFieldWidget(this.minecraft.font, middle - btnW / 2, y, btnW, BUTTON_HEIGHT, null));
     this.lengthYTextField.setValue("" + this.size.getY());
     //noinspection ConstantConditions
     this.lengthZTextField = this.addWidget(
-        new EditBox(this.minecraft.font, middle + btnW / 2, y, btnW, BUTTON_HEIGHT, null));
+        new TextFieldWidget(this.minecraft.font, middle + btnW / 2, y, btnW, BUTTON_HEIGHT, null));
     this.lengthZTextField.setValue("" + this.size.getZ());
 
     y += BUTTON_HEIGHT + 8 * MARGIN;
 
-    this.addRenderableWidget(new Button(
+    this.addButton(new Button(
         leftButtonX, y,
         BUTTON_WIDTH, BUTTON_HEIGHT,
-        new TranslatableComponent("gui.done"),
+        new TranslationTextComponent("gui.done"),
         b -> this.onDone()
     ));
 
-    this.addRenderableWidget(new Button(
+    this.addButton(new Button(
         rightButtonX, y,
         BUTTON_WIDTH, BUTTON_HEIGHT,
-        new TranslatableComponent("gui.cancel"),
+        new TranslationTextComponent("gui.cancel"),
         b -> this.onCancel()
     ));
   }
@@ -123,9 +123,9 @@ public class GuiLaserTelemeter extends Screen {
     this.zOffsetTextField.setValue(z);
   }
 
-  private static int getValue(final EditBox editBox) {
+  private static int getValue(final TextFieldWidget TextFieldWidget) {
     try {
-      return Integer.parseInt(editBox.getValue());
+      return Integer.parseInt(TextFieldWidget.getValue());
     } catch (NumberFormatException e) {
       return 0;
     }
@@ -135,7 +135,7 @@ public class GuiLaserTelemeter extends Screen {
    * Update client-side block entity and send packet to server.
    */
   private void onDone() {
-    Vec3i size = new Vec3i(getValue(this.lengthXTextField), getValue(this.lengthYTextField), getValue(this.lengthZTextField));
+    Vector3i size = new Vector3i(getValue(this.lengthXTextField), getValue(this.lengthYTextField), getValue(this.lengthZTextField));
     BlockPos offset = new BlockPos(getValue(this.xOffsetTextField), getValue(this.yOffsetTextField), getValue(this.zOffsetTextField));
     this.tileEntity.setSize(size);
     this.tileEntity.setOffset(offset);
@@ -174,34 +174,34 @@ public class GuiLaserTelemeter extends Screen {
   }
 
   @Override
-  public void render(PoseStack poseStack, int mouseX, int mouseY, float partialTicks) {
+  public void render(MatrixStack poseStack, int mouseX, int mouseY, float partialTicks) {
     //noinspection ConstantConditions
-    final Font font = this.minecraft.font;
+    final FontRenderer font = this.minecraft.font;
     final int fontHeight = font.lineHeight;
     final int middle = this.width / 2;
 
     this.renderBackground(poseStack);
 
-    drawCenteredString(poseStack, font, new TranslatableComponent("gui.build_utils.laser_telemeter.title"),
+    drawCenteredString(poseStack, font, new TranslationTextComponent("gui.build_utils.laser_telemeter.title"),
         middle, (TITLE_MARGIN - fontHeight) / 2, Utils.WHITE);
 
     int y = this.height / 2 - 2 * BUTTON_HEIGHT - MARGIN / 2 - fontHeight - 1;
 
     int btnW = (int) (BUTTON_WIDTH * 0.75);
-    drawString(poseStack, font, new TranslatableComponent("gui.build_utils.laser_telemeter.x_offset_field.label"),
+    drawString(poseStack, font, new TranslationTextComponent("gui.build_utils.laser_telemeter.x_offset_field.label"),
         (int) (middle - btnW * 1.5), y, Utils.GRAY);
-    drawString(poseStack, font, new TranslatableComponent("gui.build_utils.laser_telemeter.y_offset_field.label"),
+    drawString(poseStack, font, new TranslationTextComponent("gui.build_utils.laser_telemeter.y_offset_field.label"),
         middle - btnW / 2, y, Utils.GRAY);
-    drawString(poseStack, font, new TranslatableComponent("gui.build_utils.laser_telemeter.z_offset_field.label"),
+    drawString(poseStack, font, new TranslationTextComponent("gui.build_utils.laser_telemeter.z_offset_field.label"),
         middle + btnW / 2, y, Utils.GRAY);
 
     y += 3 * BUTTON_HEIGHT + MARGIN + fontHeight;
 
-    drawString(poseStack, font, new TranslatableComponent("gui.build_utils.laser_telemeter.length_x_field.label"),
+    drawString(poseStack, font, new TranslationTextComponent("gui.build_utils.laser_telemeter.length_x_field.label"),
         (int) (middle - btnW * 1.5), y, Utils.GRAY);
-    drawString(poseStack, font, new TranslatableComponent("gui.build_utils.laser_telemeter.length_y_field.label"),
+    drawString(poseStack, font, new TranslationTextComponent("gui.build_utils.laser_telemeter.length_y_field.label"),
         middle - btnW / 2, y, Utils.GRAY);
-    drawString(poseStack, font, new TranslatableComponent("gui.build_utils.laser_telemeter.length_z_field.label"),
+    drawString(poseStack, font, new TranslationTextComponent("gui.build_utils.laser_telemeter.length_z_field.label"),
         middle + btnW / 2, y, Utils.GRAY);
 
     this.lengthXTextField.render(poseStack, mouseX, mouseY, partialTicks);

@@ -2,9 +2,9 @@ package net.darmo_creations.build_utils.todo_list;
 
 import net.darmo_creations.build_utils.DataManager;
 import net.darmo_creations.build_utils.ManagedData;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
+import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.nbt.INBT;
+import net.minecraft.nbt.ListNBT;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -49,7 +49,7 @@ public class ToDoList implements ManagedData<ToDoList>, Iterable<ToDoListItem> {
    */
   public void setVisible(boolean visible) {
     this.visible = visible;
-    this.manager.markDirty();
+    this.manager.setDirty();
   }
 
   /**
@@ -66,7 +66,7 @@ public class ToDoList implements ManagedData<ToDoList>, Iterable<ToDoListItem> {
    */
   public void setAutoDeleteChecked(boolean autoDeleteChecked) {
     this.autoDeleteChecked = autoDeleteChecked;
-    this.manager.markDirty();
+    this.manager.setDirty();
   }
 
   /**
@@ -104,7 +104,7 @@ public class ToDoList implements ManagedData<ToDoList>, Iterable<ToDoListItem> {
    */
   public void setText(int index, String text) {
     this.items.get(index).setText(text);
-    this.manager.markDirty();
+    this.manager.setDirty();
   }
 
   /**
@@ -117,7 +117,7 @@ public class ToDoList implements ManagedData<ToDoList>, Iterable<ToDoListItem> {
    */
   public boolean setChecked(int index, boolean checked) {
     this.items.get(index).setChecked(checked);
-    this.manager.markDirty();
+    this.manager.setDirty();
     if (this.autoDeleteChecked && checked) {
       this.items.remove(index);
       return true;
@@ -134,7 +134,7 @@ public class ToDoList implements ManagedData<ToDoList>, Iterable<ToDoListItem> {
   public boolean add(ToDoListItem item) {
     if (this.size() < MAX_SIZE) {
       this.items.add(item.clone());
-      this.manager.markDirty();
+      this.manager.setDirty();
       return true;
     }
     return false;
@@ -151,7 +151,7 @@ public class ToDoList implements ManagedData<ToDoList>, Iterable<ToDoListItem> {
   public boolean add(int index, ToDoListItem item) {
     if (this.size() < MAX_SIZE) {
       this.items.add(index, item.clone());
-      this.manager.markDirty();
+      this.manager.setDirty();
       return true;
     }
     return false;
@@ -166,7 +166,7 @@ public class ToDoList implements ManagedData<ToDoList>, Iterable<ToDoListItem> {
    */
   public ToDoListItem remove(int index) {
     ToDoListItem item = this.items.remove(index);
-    this.manager.markDirty();
+    this.manager.setDirty();
     return item;
   }
 
@@ -175,7 +175,7 @@ public class ToDoList implements ManagedData<ToDoList>, Iterable<ToDoListItem> {
    */
   public void clear() {
     this.items.clear();
-    this.manager.markDirty();
+    this.manager.setDirty();
   }
 
   /**
@@ -187,7 +187,7 @@ public class ToDoList implements ManagedData<ToDoList>, Iterable<ToDoListItem> {
     int oldSize = this.size();
     boolean anyRemoved = this.items.removeIf(ToDoListItem::isChecked);
     if (anyRemoved) {
-      this.manager.markDirty();
+      this.manager.setDirty();
     }
     return oldSize - this.size();
   }
@@ -201,31 +201,31 @@ public class ToDoList implements ManagedData<ToDoList>, Iterable<ToDoListItem> {
     this.items.sort(comparator != null
         ? (i1, i2) -> comparator.compare(i1.getText().toLowerCase(), i2.getText().toLowerCase())
         : null);
-    this.manager.markDirty();
+    this.manager.setDirty();
   }
 
   @Override
-  public CompoundTag writeToNBT() {
-    CompoundTag tag = new CompoundTag();
+  public CompoundNBT writeToNBT() {
+    CompoundNBT tag = new CompoundNBT();
     tag.putBoolean(VISIBLE_KEY, this.visible);
     tag.putBoolean(AUTO_DELETE_KEY, this.autoDeleteChecked);
-    ListTag items = new ListTag();
+    ListNBT items = new ListNBT();
     this.forEach(item -> items.add(item.writeToNBT()));
     tag.put(ITEMS_KEY, items);
     return tag;
   }
 
   @Override
-  public void readFromNBT(CompoundTag tag) {
+  public void readFromNBT(CompoundNBT tag) {
     this.items.clear();
     this.visible = tag.getBoolean(VISIBLE_KEY);
     this.autoDeleteChecked = tag.getBoolean(AUTO_DELETE_KEY);
     int i = 0;
-    for (Tag item : tag.getList(ITEMS_KEY, new CompoundTag().getId())) {
+    for (INBT item : tag.getList(ITEMS_KEY, new CompoundNBT().getId())) {
       if (i == MAX_SIZE) {
         break;
       }
-      this.add(new ToDoListItem((CompoundTag) item));
+      this.add(new ToDoListItem((CompoundNBT) item));
       i++;
     }
   }

@@ -3,20 +3,20 @@ package net.darmo_creations.build_utils.blocks;
 import net.darmo_creations.build_utils.Utils;
 import net.darmo_creations.build_utils.gui.GuiLaserTelemeter;
 import net.darmo_creations.build_utils.tile_entities.TileEntityLaserTelemeter;
+import net.minecraft.block.Block;
+import net.minecraft.block.BlockRenderType;
+import net.minecraft.block.BlockState;
+import net.minecraft.block.material.Material;
+import net.minecraft.block.material.MaterialColor;
 import net.minecraft.client.Minecraft;
-import net.minecraft.core.BlockPos;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.BaseEntityBlock;
-import net.minecraft.world.level.block.RenderShape;
-import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.state.BlockBehaviour;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.material.Material;
-import net.minecraft.world.level.material.MaterialColor;
-import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.ActionResultType;
+import net.minecraft.util.Hand;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.BlockRayTraceResult;
+import net.minecraft.world.IBlockReader;
+import net.minecraft.world.World;
 
 import java.util.Optional;
 
@@ -25,36 +25,42 @@ import java.util.Optional;
  *
  * @see TileEntityLaserTelemeter
  */
-public class BlockLaserTelemeter extends BaseEntityBlock implements IModBlock {
+public class BlockLaserTelemeter extends Block implements IModBlock {
   public BlockLaserTelemeter() {
-    super(BlockBehaviour.Properties
+    super(Block.Properties
         .of(Material.METAL, MaterialColor.COLOR_RED)
-        .strength(-1, 3600000)
+        .strength(-1, 3_600_000)
         .noDrops());
   }
 
   @SuppressWarnings("deprecation")
   @Override
-  public InteractionResult use(BlockState state, Level world, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+  public ActionResultType use(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockRayTraceResult hit) {
     Optional<TileEntityLaserTelemeter> te = Utils.getTileEntity(TileEntityLaserTelemeter.class, world, pos);
 
     if (te.isPresent() && player.canUseGameMasterBlocks()) {
       if (world.isClientSide()) {
         Minecraft.getInstance().setScreen(new GuiLaserTelemeter(te.get()));
       }
-      return InteractionResult.SUCCESS;
+      return ActionResultType.SUCCESS;
     } else {
-      return InteractionResult.FAIL;
+      return ActionResultType.FAIL;
     }
   }
 
   @Override
-  public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-    return new TileEntityLaserTelemeter(pos, state);
+  public TileEntity createTileEntity(BlockState state, IBlockReader world) {
+    return new TileEntityLaserTelemeter();
   }
 
   @Override
-  public RenderShape getRenderShape(BlockState p_49232_) {
-    return RenderShape.MODEL;
+  public boolean hasTileEntity(BlockState state) {
+    return true;
+  }
+
+  @SuppressWarnings("deprecation")
+  @Override
+  public BlockRenderType getRenderShape(BlockState blockState) {
+    return BlockRenderType.MODEL;
   }
 }

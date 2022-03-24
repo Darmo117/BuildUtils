@@ -2,20 +2,19 @@ package net.darmo_creations.build_utils.items;
 
 import net.darmo_creations.build_utils.BuildUtils;
 import net.darmo_creations.build_utils.Utils;
-import net.darmo_creations.build_utils.calculator.Calculator;
-import net.minecraft.ChatFormatting;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.Vec3i;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtUtils;
-import net.minecraft.network.chat.Style;
-import net.minecraft.network.chat.TextComponent;
-import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.context.UseOnContext;
-import net.minecraft.world.level.Level;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.ItemUseContext;
+import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.nbt.NBTUtil;
+import net.minecraft.util.ActionResultType;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.vector.Vector3i;
+import net.minecraft.util.text.StringTextComponent;
+import net.minecraft.util.text.Style;
+import net.minecraft.util.text.TextFormatting;
+import net.minecraft.world.World;
 
 /**
  * Item used to measure lengths, areas and volumes.
@@ -33,50 +32,37 @@ public class ItemRuler extends Item {
   }
 
   @Override
-  public InteractionResult useOn(UseOnContext context) {
-    Player player = context.getPlayer();
+  public ActionResultType useOn(ItemUseContext context) {
+    PlayerEntity player = context.getPlayer();
     if (player == null) {
-      return InteractionResult.FAIL;
+      return ActionResultType.FAIL;
     }
     ItemStack heldItem = context.getItemInHand();
     BlockPos pos = context.getClickedPos();
-    Level world = context.getLevel();
+    World world = context.getLevel();
     RulerData data = RulerData.fromTag(heldItem.getTag());
 
     if (data.position == null) {
       data.position = pos;
-      Utils.sendMessage(world, player, new TextComponent(
+      Utils.sendMessage(world, player, new StringTextComponent(
           "Selected first position: " + Utils.blockPosToString(pos))
-          .setStyle(Style.EMPTY.withColor(ChatFormatting.AQUA)));
+          .setStyle(Style.EMPTY.withColor(TextFormatting.AQUA)));
     } else {
-      Utils.sendMessage(world, player, new TextComponent(
+      Utils.sendMessage(world, player, new StringTextComponent(
           "Selected second position: " + Utils.blockPosToString(pos))
-          .setStyle(Style.EMPTY.withColor(ChatFormatting.DARK_AQUA)));
+          .setStyle(Style.EMPTY.withColor(TextFormatting.DARK_AQUA)));
 
-      Calculator calculator = BuildUtils.CALCULATORS_MANAGER.getOrCreatePlayerData(player);
-      // Declare variables storing the positions in the player’s calculator
-      calculator.setVariable("ruler_x1", data.position.getX());
-      calculator.setVariable("ruler_y1", data.position.getY());
-      calculator.setVariable("ruler_z1", data.position.getZ());
-      calculator.setVariable("ruler_x2", pos.getX());
-      calculator.setVariable("ruler_y2", pos.getY());
-      calculator.setVariable("ruler_z2", pos.getZ());
-
-      Vec3i lengths = Utils.getLengths(data.position, pos);
+      Vector3i lengths = Utils.getLengths(data.position, pos);
       int lengthX = lengths.getX();
       int lengthY = lengths.getY();
       int lengthZ = lengths.getZ();
-      Utils.sendMessage(world, player, new TextComponent(
+      Utils.sendMessage(world, player, new StringTextComponent(
           String.format("Size (XYZ): %d x %d x %d", lengthX, lengthY, lengthZ))
-          .setStyle(Style.EMPTY.withColor(ChatFormatting.GREEN)));
-      // Declare variables storing the lengths
-      calculator.setVariable("ruler_lx", lengthX);
-      calculator.setVariable("ruler_ly", lengthY);
-      calculator.setVariable("ruler_lz", lengthZ);
+          .setStyle(Style.EMPTY.withColor(TextFormatting.GREEN)));
 
       // Do not display any area if at least two dimensions have a length of 1 (single line of blocks selected)
       if (lengthX + lengthY != 2 && lengthX + lengthZ != 2 && lengthY + lengthZ != 2) {
-        Vec3i areas = Utils.getAreas(data.position, pos);
+        Vector3i areas = Utils.getAreas(data.position, pos);
         int areaX = areas.getX();
         int areaY = areas.getY();
         int areaZ = areas.getZ();
@@ -90,34 +76,26 @@ public class ItemRuler extends Item {
           } else {
             area = areaY;
           }
-          Utils.sendMessage(world, player, new TextComponent(
+          Utils.sendMessage(world, player, new StringTextComponent(
               String.format("Area: %d", area))
-              .setStyle(Style.EMPTY.withColor(ChatFormatting.DARK_GREEN)));
-          // Declare variables storing the area
-          calculator.setVariable("ruler_area", area);
+              .setStyle(Style.EMPTY.withColor(TextFormatting.DARK_GREEN)));
         } else {
-          Utils.sendMessage(world, player, new TextComponent(
+          Utils.sendMessage(world, player, new StringTextComponent(
               String.format("Areas (XYZ): %d, %d, %d", areaX, areaY, areaZ))
-              .setStyle(Style.EMPTY.withColor(ChatFormatting.DARK_GREEN)));
-          // Declare variables storing the areas
-          calculator.setVariable("ruler_ax", areaX);
-          calculator.setVariable("ruler_ay", areaY);
-          calculator.setVariable("ruler_az", areaZ);
+              .setStyle(Style.EMPTY.withColor(TextFormatting.DARK_GREEN)));
         }
       }
 
       int volume = Utils.getVolume(data.position, pos);
-      Utils.sendMessage(world, player, new TextComponent(
+      Utils.sendMessage(world, player, new StringTextComponent(
           String.format("Volume: %d", volume))
-          .setStyle(Style.EMPTY.withColor(ChatFormatting.GOLD)));
-      // Declare variables storing the volume
-      calculator.setVariable("ruler_vol", volume);
+          .setStyle(Style.EMPTY.withColor(TextFormatting.GOLD)));
 
       data.position = null;
     }
 
     heldItem.setTag(data.toTag());
-    return InteractionResult.SUCCESS;
+    return ActionResultType.SUCCESS;
   }
 
   /**
@@ -131,10 +109,10 @@ public class ItemRuler extends Item {
      * @param data NBT tag to deserialize.
      * @return The RulerData object.
      */
-    static RulerData fromTag(CompoundTag data) {
+    static RulerData fromTag(CompoundNBT data) {
       if (data != null) {
-        CompoundTag tag = data.getCompound(POS_TAG_KEY);
-        return new RulerData(!tag.isEmpty() ? NbtUtils.readBlockPos(tag) : null);
+        CompoundNBT tag = data.getCompound(POS_TAG_KEY);
+        return new RulerData(!tag.isEmpty() ? NBTUtil.readBlockPos(tag) : null);
       } else {
         return new RulerData();
       }
@@ -159,11 +137,11 @@ public class ItemRuler extends Item {
     /**
      * Convert this data object to NBT tags.
      */
-    CompoundTag toTag() {
-      CompoundTag root = new CompoundTag();
+    CompoundNBT toTag() {
+      CompoundNBT root = new CompoundNBT();
 
       if (this.position != null) {
-        root.put(POS_TAG_KEY, NbtUtils.writeBlockPos(this.position));
+        root.put(POS_TAG_KEY, NBTUtil.writeBlockPos(this.position));
       }
 
       return root;

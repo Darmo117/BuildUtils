@@ -15,15 +15,15 @@ import com.mojang.brigadier.tree.LiteralCommandNode;
 import net.darmo_creations.build_utils.BuildUtils;
 import net.darmo_creations.build_utils.todo_list.ToDoList;
 import net.darmo_creations.build_utils.todo_list.ToDoListItem;
-import net.minecraft.ChatFormatting;
-import net.minecraft.advancements.critereon.MinMaxBounds;
-import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.commands.Commands;
-import net.minecraft.commands.arguments.RangeArgument;
-import net.minecraft.network.chat.TextComponent;
-import net.minecraft.network.chat.TranslatableComponent;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.player.Player;
+import net.minecraft.advancements.criterion.MinMaxBounds;
+import net.minecraft.command.CommandSource;
+import net.minecraft.command.Commands;
+import net.minecraft.command.arguments.IRangeArgument;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.util.text.StringTextComponent;
+import net.minecraft.util.text.TextFormatting;
+import net.minecraft.util.text.TranslationTextComponent;
 import net.minecraftforge.server.command.EnumArgument;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
@@ -43,16 +43,16 @@ import java.util.function.Supplier;
  */
 public class ToDoListCommand {
   private static final SimpleCommandExceptionType MISSING_PLAYER_ERROR = new SimpleCommandExceptionType(
-      new TranslatableComponent("commands.todo.error.missing_player")
+      new TranslationTextComponent("commands.todo.error.missing_player")
   );
   private static final SimpleCommandExceptionType FULL_GLOBAL_LIST_ERROR = new SimpleCommandExceptionType(
-      new TranslatableComponent("commands.todo.global.error.list_full")
+      new TranslationTextComponent("commands.todo.global.error.list_full")
   );
   private static final DynamicCommandExceptionType FULL_PLAYER_LIST_ERROR = new DynamicCommandExceptionType(
-      playerName -> new TranslatableComponent("commands.todo.player.error.list_full", playerName)
+      playerName -> new TranslationTextComponent("commands.todo.player.error.list_full", playerName)
   );
   private static final DynamicCommandExceptionType OUT_OF_BOUNDS_ERROR = new DynamicCommandExceptionType(
-      index -> new TranslatableComponent("commands.todo.error.out_of_bounds", index)
+      index -> new TranslationTextComponent("commands.todo.error.out_of_bounds", index)
   );
 
   private static final String TEXT_ARG = "text";
@@ -67,16 +67,16 @@ public class ToDoListCommand {
   /**
    * Register this command in the given dispatcher.
    */
-  public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
+  public static void register(CommandDispatcher<CommandSource> dispatcher) {
     dispatcher.register(buildCommand("todo", false));
-    LiteralCommandNode<CommandSourceStack> globalCommand = dispatcher.register(buildCommand("todoglobal", true));
+    LiteralCommandNode<CommandSource> globalCommand = dispatcher.register(buildCommand("todoglobal", true));
     dispatcher.register(Commands.literal("todog")
         .requires(commandSource -> commandSource.hasPermission(2))
         .redirect(globalCommand)
     );
   }
 
-  private static LiteralArgumentBuilder<CommandSourceStack> buildCommand(final String name, final boolean global) {
+  private static LiteralArgumentBuilder<CommandSource> buildCommand(final String name, final boolean global) {
     return Commands.literal(name)
         .requires(commandSource -> commandSource.hasPermission(global ? 2 : 0))
         .then(Commands.literal("clear")
@@ -97,7 +97,7 @@ public class ToDoListCommand {
         .then(Commands.literal("remove")
             .then(Commands.literal("checked")
                 .executes(context -> removeItems(context, global, true)))
-            .then(Commands.argument(INDICES_ARG, new RangeArgument.Ints())
+            .then(Commands.argument(INDICES_ARG, new IRangeArgument.IntRange())
                 .executes(context -> removeItems(context, global, false))))
         .then(Commands.literal("edit")
             .then(Commands.argument(INDEX_ARG, IntegerArgumentType.integer(1))
@@ -146,7 +146,7 @@ public class ToDoListCommand {
   /**
    * Build the options from {@link ListOption#values()}.
    */
-  private static ArgumentBuilder<CommandSourceStack, ?> buildOptions(ArgumentBuilder<CommandSourceStack, ?> root, boolean global) {
+  private static ArgumentBuilder<CommandSource, ?> buildOptions(ArgumentBuilder<CommandSource, ?> root, boolean global) {
     for (ListOption option : ListOption.values()) {
       root = root.then(Commands.literal(option.name())
           .then(Commands.argument(OPTION_VALUE_ARG, option.getArgumentType())
@@ -167,18 +167,18 @@ public class ToDoListCommand {
    * @return A pair containing the player’s name and its todo list.
    * Name is null if the global list is queried.
    */
-  public static Pair<String, ToDoList> getList(final CommandContext<CommandSourceStack> context, final boolean global) throws CommandSyntaxException {
+  public static Pair<String, ToDoList> getList(final CommandContext<CommandSource> context, final boolean global) throws CommandSyntaxException {
     String username = null;
     ToDoList list;
 
     Optional<Entity> entity = Optional.ofNullable(context.getSource().getEntity());
-    if (entity.isEmpty() || !(entity.get() instanceof Player)) {
+    if (!entity.isPresent() || !(entity.get() instanceof PlayerEntity)) {
       throw MISSING_PLAYER_ERROR.create();
     }
     if (global) {
       list = BuildUtils.TODO_LISTS_MANAGER.getGlobalData();
     } else {
-      Player player = (Player) entity.get();
+      PlayerEntity player = (PlayerEntity) entity.get();
       username = player.getGameProfile().getName();
       list = BuildUtils.TODO_LISTS_MANAGER.getOrCreatePlayerData(player);
     }
@@ -193,17 +193,17 @@ public class ToDoListCommand {
    * @param global  Whether to use the global or player todo list.
    * @return The number of deleted items.
    */
-  private static int clearList(final CommandContext<CommandSourceStack> context, final boolean global)
+  private static int clearList(final CommandContext<CommandSource> context, final boolean global)
       throws CommandSyntaxException {
     Pair<String, ToDoList> data = getList(context, global);
     ToDoList list = data.getRight();
     int size = list.size();
     list.clear();
-    TranslatableComponent component;
+    TranslationTextComponent component;
     if (global) {
-      component = new TranslatableComponent("commands.todo.global.feedback.cleared");
+      component = new TranslationTextComponent("commands.todo.global.feedback.cleared");
     } else {
-      component = new TranslatableComponent("commands.todo.player.feedback.cleared", data.getLeft());
+      component = new TranslationTextComponent("commands.todo.player.feedback.cleared", data.getLeft());
     }
     context.getSource().sendSuccess(component, true);
     return size;
@@ -215,7 +215,7 @@ public class ToDoListCommand {
    * @param context Context of the command.
    * @param global  Whether to use the global or player todo list.
    */
-  private static void addItem(final CommandContext<CommandSourceStack> context, final boolean global, final boolean insert)
+  private static void addItem(final CommandContext<CommandSource> context, final boolean global, final boolean insert)
       throws CommandSyntaxException {
     Pair<String, ToDoList> data = getList(context, global);
     String playerName = data.getLeft();
@@ -230,12 +230,12 @@ public class ToDoListCommand {
     }
     if (added) {
       if (!list.isVisible()) {
-        TranslatableComponent component;
-        text = ChatFormatting.ITALIC + text + ChatFormatting.RESET;
+        TranslationTextComponent component;
+        text = TextFormatting.ITALIC + text + TextFormatting.RESET;
         if (global) {
-          component = new TranslatableComponent("commands.todo.global.feedback.item_added", text);
+          component = new TranslationTextComponent("commands.todo.global.feedback.item_added", text);
         } else {
-          component = new TranslatableComponent("commands.todo.player.feedback.item_added", text, playerName);
+          component = new TranslationTextComponent("commands.todo.player.feedback.item_added", text, playerName);
         }
         context.getSource().sendSuccess(component, true);
       }
@@ -254,7 +254,7 @@ public class ToDoListCommand {
    * @param global  Whether to use the global or player todo list.
    * @return The number of items that were removed.
    */
-  private static int removeItems(final CommandContext<CommandSourceStack> context, final boolean global, final boolean checked)
+  private static int removeItems(final CommandContext<CommandSource> context, final boolean global, final boolean checked)
       throws CommandSyntaxException {
     Pair<String, ToDoList> data = getList(context, global);
     String playerName = data.getLeft();
@@ -262,28 +262,28 @@ public class ToDoListCommand {
     if (checked) {
       int removed = list.deleteCheckedItems();
       if (removed != 0) {
-        String key = "commands.todo.%s.feedback.checked_items_removed".formatted(global ? "global" : "player");
-        TranslatableComponent component;
+        String key = String.format("commands.todo.%s.feedback.checked_items_removed", global ? "global" : "player");
+        TranslationTextComponent component;
         if (global) {
-          component = new TranslatableComponent(key, removed);
+          component = new TranslationTextComponent(key, removed);
         } else {
-          component = new TranslatableComponent(key, removed, playerName);
+          component = new TranslationTextComponent(key, removed, playerName);
         }
         context.getSource().sendSuccess(component, true);
       } else {
-        String key = "commands.todo.%s.feedback.no_checked_items_removed".formatted(global ? "global" : "player");
-        TranslatableComponent component;
+        String key = String.format("commands.todo.%s.feedback.no_checked_items_removed", global ? "global" : "player");
+        TranslationTextComponent component;
         if (global) {
-          component = new TranslatableComponent(key);
+          component = new TranslationTextComponent(key);
         } else {
-          component = new TranslatableComponent(key, playerName);
+          component = new TranslationTextComponent(key, playerName);
         }
         context.getSource().sendSuccess(component, true);
       }
       return removed;
 
     } else {
-      MinMaxBounds.Ints indices = RangeArgument.Ints.getRange(context, INDICES_ARG);
+      MinMaxBounds.IntBound indices = IRangeArgument.IntRange.getRange(context, INDICES_ARG);
       int min = Optional.ofNullable(indices.getMin()).map(i -> i - 1).orElse(0);
       int max = Optional.ofNullable(indices.getMax()).map(i -> i - 1).orElse(list.size() - 1);
       if (min >= list.size() || min < 0) {
@@ -296,12 +296,12 @@ public class ToDoListCommand {
         list.remove(min);
       }
       int removedNb = max - min + 1;
-      String key = "commands.todo.%s.feedback.items_removed".formatted(global ? "global" : "player");
-      TranslatableComponent component;
+      String key = String.format("commands.todo.%s.feedback.items_removed", global ? "global" : "player");
+      TranslationTextComponent component;
       if (global) {
-        component = new TranslatableComponent(key, removedNb);
+        component = new TranslationTextComponent(key, removedNb);
       } else {
-        component = new TranslatableComponent(key, removedNb, playerName);
+        component = new TranslationTextComponent(key, removedNb, playerName);
       }
       context.getSource().sendSuccess(component, true);
       return removedNb;
@@ -314,7 +314,7 @@ public class ToDoListCommand {
    * @param context Context of the command.
    * @param global  Whether to use the global or player todo list.
    */
-  private static void setItemText(final CommandContext<CommandSourceStack> context, final boolean global) throws CommandSyntaxException {
+  private static void setItemText(final CommandContext<CommandSource> context, final boolean global) throws CommandSyntaxException {
     Pair<String, ToDoList> data = getList(context, global);
     String playerName = data.getLeft();
     ToDoList list = data.getRight();
@@ -325,12 +325,12 @@ public class ToDoListCommand {
     String text = StringArgumentType.getString(context, TEXT_ARG);
     list.setText(index, text);
     if (!list.isVisible()) {
-      TranslatableComponent component;
-      text = ChatFormatting.ITALIC + text + ChatFormatting.RESET;
+      TranslationTextComponent component;
+      text = TextFormatting.ITALIC + text + TextFormatting.RESET;
       if (global) {
-        component = new TranslatableComponent("commands.todo.global.feedback.item_text_changed", index + 1, text);
+        component = new TranslationTextComponent("commands.todo.global.feedback.item_text_changed", index + 1, text);
       } else {
-        component = new TranslatableComponent("commands.todo.player.feedback.item_text_changed", index + 1, text, playerName);
+        component = new TranslationTextComponent("commands.todo.player.feedback.item_text_changed", index + 1, text, playerName);
       }
       context.getSource().sendSuccess(component, true);
     }
@@ -342,7 +342,7 @@ public class ToDoListCommand {
    * @param context Context of the command.
    * @param global  Whether to use the global or player todo list.
    */
-  private static void checkItem(final CommandContext<CommandSourceStack> context, final boolean global)
+  private static void checkItem(final CommandContext<CommandSource> context, final boolean global)
       throws CommandSyntaxException {
     Pair<String, ToDoList> data = getList(context, global);
     ToDoList list = data.getRight();
@@ -354,15 +354,15 @@ public class ToDoListCommand {
       throw OUT_OF_BOUNDS_ERROR.create(index + 1);
     }
     if (!list.isVisible()) {
-      String key = "commands.todo.%s.feedback.item_checked".formatted(global ? "global" : "player");
+      String key = String.format("commands.todo.%s.feedback.item_checked", global ? "global" : "player");
       if (deleted) {
         key += ".item_checked_deleted";
       }
-      TranslatableComponent component;
+      TranslationTextComponent component;
       if (global) {
-        component = new TranslatableComponent(key, index + 1);
+        component = new TranslationTextComponent(key, index + 1);
       } else {
-        component = new TranslatableComponent(key, index + 1, data.getLeft());
+        component = new TranslationTextComponent(key, index + 1, data.getLeft());
       }
       context.getSource().sendSuccess(component, true);
     }
@@ -374,7 +374,7 @@ public class ToDoListCommand {
    * @param context Context of the command.
    * @param global  Whether to use the global or player todo list.
    */
-  private static void uncheckItem(final CommandContext<CommandSourceStack> context, final boolean global)
+  private static void uncheckItem(final CommandContext<CommandSource> context, final boolean global)
       throws CommandSyntaxException {
     Pair<String, ToDoList> data = getList(context, global);
     ToDoList list = data.getRight();
@@ -385,12 +385,12 @@ public class ToDoListCommand {
       throw OUT_OF_BOUNDS_ERROR.create(index + 1);
     }
     if (!list.isVisible()) {
-      String key = "commands.todo.%s.feedback.item_unchecked".formatted(global ? "global" : "player");
-      TranslatableComponent component;
+      String key = String.format("commands.todo.%s.feedback.item_unchecked", global ? "global" : "player");
+      TranslationTextComponent component;
       if (global) {
-        component = new TranslatableComponent(key, index + 1);
+        component = new TranslationTextComponent(key, index + 1);
       } else {
-        component = new TranslatableComponent(key, index + 1, data.getLeft());
+        component = new TranslationTextComponent(key, index + 1, data.getLeft());
       }
       context.getSource().sendSuccess(component, true);
     }
@@ -402,7 +402,7 @@ public class ToDoListCommand {
    * @param context Context of the command.
    * @param global  Whether to use the global or player todo list.
    */
-  private static void moveItem(final CommandContext<CommandSourceStack> context, final boolean global)
+  private static void moveItem(final CommandContext<CommandSource> context, final boolean global)
       throws CommandSyntaxException {
     Pair<String, ToDoList> data = getList(context, global);
     ToDoList list = data.getRight();
@@ -417,19 +417,19 @@ public class ToDoListCommand {
    * @param context Context of the command.
    * @param global  Whether to use the global or player todo list.
    */
-  private static void sortList(final CommandContext<CommandSourceStack> context, final boolean global)
+  private static void sortList(final CommandContext<CommandSource> context, final boolean global)
       throws CommandSyntaxException {
     Pair<String, ToDoList> data = getList(context, global);
     ToDoList list = data.getRight();
     SortOrder order = context.getArgument(SORT_ARG, SortOrder.class);
     list.sort(order.comparator);
     if (!list.isVisible()) {
-      String key = "commands.todo.%s.feedback.list_sorted".formatted(global ? "global" : "player");
-      TranslatableComponent component;
+      String key = String.format("commands.todo.%s.feedback.list_sorted", global ? "global" : "player");
+      TranslationTextComponent component;
       if (global) {
-        component = new TranslatableComponent(key);
+        component = new TranslationTextComponent(key);
       } else {
-        component = new TranslatableComponent(key, data.getLeft());
+        component = new TranslationTextComponent(key, data.getLeft());
       }
       context.getSource().sendSuccess(component, true);
     }
@@ -441,13 +441,13 @@ public class ToDoListCommand {
    * @param context Context of the command.
    * @param global  Whether to use the global or player todo list.
    */
-  private static void getListOption(final CommandContext<CommandSourceStack> context, final boolean global)
+  private static void getListOption(final CommandContext<CommandSource> context, final boolean global)
       throws CommandSyntaxException {
     Pair<String, ToDoList> data = getList(context, global);
     ToDoList list = data.getRight();
     ListOption option = context.getArgument(OPTION_ARG, ListOption.class);
     String value = option.getValueRepresentation(list);
-    context.getSource().sendSuccess(new TextComponent(value), true);
+    context.getSource().sendSuccess(new StringTextComponent(value), true);
   }
 
   /**
@@ -457,14 +457,14 @@ public class ToDoListCommand {
    * @param global  Whether to use the global or player todo list.
    * @param option  The option to set the value of.
    */
-  private static void setListOption(final CommandContext<CommandSourceStack> context, final boolean global, final ListOption option)
+  private static void setListOption(final CommandContext<CommandSource> context, final boolean global, final ListOption option)
       throws CommandSyntaxException {
     Pair<String, ToDoList> data = getList(context, global);
     ToDoList list = data.getRight();
     Object value = option.getArgument(context, OPTION_VALUE_ARG);
     option.setValue(list, value);
     context.getSource().sendSuccess(
-        new TranslatableComponent("commands.todo.feedback.option_set", option, value), true);
+        new TranslationTextComponent("commands.todo.feedback.option_set", option, value), true);
   }
 
   /**

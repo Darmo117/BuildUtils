@@ -7,7 +7,7 @@ package net.darmo_creations.build_utils;
  */
 public interface ManagedData<T extends ManagedData<T>> extends NBTSerializable {
   /**
-   * Sets the manager for this object. Objects implementing this interface should call {@link DataManager#markDirty()}
+   * Sets the manager for this object. Objects implementing this interface should call {@link DataManager#setDirty()}
    * whenever their data is modified.
    *
    * @param manager The manager.

@@ -1,16 +1,15 @@
 package net.darmo_creations.build_utils.gui;
 
-import com.mojang.blaze3d.platform.Window;
-import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.matrix.MatrixStack;
 import net.darmo_creations.build_utils.BuildUtils;
 import net.darmo_creations.build_utils.Utils;
 import net.darmo_creations.build_utils.todo_list.ToDoList;
 import net.darmo_creations.build_utils.todo_list.ToDoListItem;
-import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiComponent;
-import net.minecraft.client.resources.language.I18n;
+import net.minecraft.client.gui.AbstractGui;
+import net.minecraft.client.gui.FontRenderer;
+import net.minecraft.client.resources.I18n;
+import net.minecraft.util.text.TextFormatting;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
@@ -21,7 +20,7 @@ import java.util.List;
  * GUI overlay for todo lists.
  */
 @OnlyIn(Dist.CLIENT)
-public class ToDoListsOverlay extends GuiComponent {
+public class ToDoListsOverlay extends AbstractGui {
   private static final int PADDING = 3;
 
   private final Minecraft minecraft;
@@ -33,15 +32,15 @@ public class ToDoListsOverlay extends GuiComponent {
   /**
    * Render this overlay.
    */
-  public void render(PoseStack poseStack, final Window window) {
+  public void render(MatrixStack poseStack) {
     ToDoList globalList = BuildUtils.TODO_LISTS_MANAGER.getGlobalData();
     //noinspection ConstantConditions
     ToDoList playerList = BuildUtils.TODO_LISTS_MANAGER.getOrCreatePlayerData(this.minecraft.player);
     if (globalList.isVisible()) {
-      this.renderList(poseStack, window, globalList, null, true);
+      this.renderList(poseStack, globalList, null, true);
     }
     if (playerList.isVisible()) {
-      this.renderList(poseStack, window, playerList, this.minecraft.player.getGameProfile().getName(), false);
+      this.renderList(poseStack, playerList, this.minecraft.player.getGameProfile().getName(), false);
     }
   }
 
@@ -52,7 +51,7 @@ public class ToDoListsOverlay extends GuiComponent {
    * @param playerName Name of the player associated to the list.
    * @param leftSide   True to draw on the left side, false for the right.
    */
-  private void renderList(PoseStack poseStack, final Window window, final ToDoList list, final String playerName,
+  private void renderList(MatrixStack poseStack, final ToDoList list, final String playerName,
                           final boolean leftSide) {
     String title;
     if (playerName == null) {
@@ -61,7 +60,7 @@ public class ToDoListsOverlay extends GuiComponent {
       title = I18n.get("gui.build_utils.todo_list.title.player", playerName);
     }
 
-    Font font = this.minecraft.font;
+    FontRenderer font = this.minecraft.font;
     int width = font.width(title);
     int height = font.lineHeight * 2;
 
@@ -71,9 +70,9 @@ public class ToDoListsOverlay extends GuiComponent {
     for (ToDoListItem item : list) {
       String text = String.format(
           "%s%0" + nbDigits + "d. %s%s",
-          item.isChecked() ? ChatFormatting.GREEN : ChatFormatting.RED,
+          item.isChecked() ? TextFormatting.GREEN : TextFormatting.RED,
           i + 1,
-          ChatFormatting.RESET,
+          TextFormatting.RESET,
           item.getText()
       );
       itemStrings.add(text);
@@ -83,7 +82,7 @@ public class ToDoListsOverlay extends GuiComponent {
     }
     width += 2 * PADDING;
 
-    int x = leftSide ? 0 : (window.getGuiScaledWidth() - width);
+    int x = leftSide ? 0 : (this.minecraft.getWindow().getGuiScaledWidth() - width);
     int y = 0;
 
 //    int bg = (int) (this.minecraft.options.textBackgroundOpacity * 255) << 24;

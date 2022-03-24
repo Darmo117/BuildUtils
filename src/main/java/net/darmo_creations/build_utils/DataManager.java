@@ -1,10 +1,10 @@
 package net.darmo_creations.build_utils;
 
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.saveddata.SavedData;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.nbt.INBT;
+import net.minecraft.nbt.ListNBT;
+import net.minecraft.world.storage.WorldSavedData;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -16,7 +16,7 @@ import java.util.UUID;
  *
  * @param <T> Type of managed data.
  */
-public abstract class DataManager<T extends ManagedData<T>> extends SavedData {
+public abstract class DataManager<T extends ManagedData<T>> extends WorldSavedData {
   private static final String GLOBAL_DATA_KEY = "GlobalData";
   private static final String PLAYERS_DATA_KEY = "PlayersData";
   private static final String UUID_KEY = "UUID";
@@ -26,9 +26,12 @@ public abstract class DataManager<T extends ManagedData<T>> extends SavedData {
   private final Map<UUID, T> playerData;
 
   /**
-   * Create an empty manager.
+   * Create a manager with the given name.
+   *
+   * @param name Manager’s name.
    */
-  public DataManager() {
+  public DataManager(final String name) {
+    super(name);
     this.globalData = this.getDefaultDataValue();
     this.globalData.setManager(this);
     this.playerData = new HashMap<>();
@@ -47,36 +50,29 @@ public abstract class DataManager<T extends ManagedData<T>> extends SavedData {
   }
 
   /**
-   * Alias of {@link #setDirty()} for retro-compatibility.
-   */
-  public void markDirty() {
-    this.setDirty();
-  }
-
-  /**
    * Return the data object associated to the given data object.
    * If no data object for the player exists, a new one is created then returned.
    *
    * @param player The player.
    * @return The associated data object.
    */
-  public T getOrCreatePlayerData(final Player player) {
+  public T getOrCreatePlayerData(final PlayerEntity player) {
     UUID playerUUID = player.getGameProfile().getId();
     if (!this.playerData.containsKey(playerUUID)) {
       T data = this.getDefaultDataValue();
       data.setManager(this);
       this.playerData.put(playerUUID, data);
-      this.markDirty();
+      this.setDirty();
     }
     return this.playerData.get(playerUUID);
   }
 
   @Override
-  public CompoundTag save(CompoundTag tag) {
+  public CompoundNBT save(CompoundNBT tag) {
     tag.put(GLOBAL_DATA_KEY, this.globalData.writeToNBT());
-    ListTag list = new ListTag();
+    ListNBT list = new ListNBT();
     for (Map.Entry<UUID, T> item : this.playerData.entrySet()) {
-      CompoundTag itemTag = new CompoundTag();
+      CompoundNBT itemTag = new CompoundNBT();
       itemTag.putUUID(UUID_KEY, item.getKey());
       itemTag.put(PLAYER_DATA_KEY, item.getValue().writeToNBT());
       list.add(itemTag);
@@ -85,18 +81,14 @@ public abstract class DataManager<T extends ManagedData<T>> extends SavedData {
     return tag;
   }
 
-  /**
-   * Update this manager from the given tag.
-   *
-   * @param tag The tag.
-   */
-  protected void read(final CompoundTag tag) {
+  @Override
+  public void load(CompoundNBT tag) {
     this.globalData = this.getDefaultDataValue();
     this.globalData.setManager(this);
     this.globalData.readFromNBT(tag.getCompound(GLOBAL_DATA_KEY));
     this.playerData.clear();
-    for (Tag item : tag.getList(PLAYERS_DATA_KEY, new CompoundTag().getId())) {
-      CompoundTag c = (CompoundTag) item;
+    for (INBT item : tag.getList(PLAYERS_DATA_KEY, new CompoundNBT().getId())) {
+      CompoundNBT c = (CompoundNBT) item;
       T playerData = this.getDefaultDataValue();
       playerData.setManager(this);
       playerData.readFromNBT(c.getCompound(PLAYER_DATA_KEY));

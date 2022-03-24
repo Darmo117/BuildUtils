@@ -1,7 +1,6 @@
 package net.darmo_creations.build_utils.todo_list;
 
-import net.minecraft.nbt.CompoundTag;
-import org.jetbrains.annotations.NotNull;
+import net.minecraft.nbt.CompoundNBT;
 
 import java.util.Objects;
 
@@ -30,7 +29,7 @@ public class ToDoListItem implements Cloneable, Comparable<ToDoListItem> {
    *
    * @param tag The tag.
    */
-  public ToDoListItem(CompoundTag tag) {
+  public ToDoListItem(CompoundNBT tag) {
     this.text = tag.getString(TEXT_KEY);
     this.checked = tag.getBoolean(CHECKED_KEY);
   }
@@ -72,8 +71,8 @@ public class ToDoListItem implements Cloneable, Comparable<ToDoListItem> {
    *
    * @return The serialized data.
    */
-  public CompoundTag writeToNBT() {
-    CompoundTag tag = new CompoundTag();
+  public CompoundNBT writeToNBT() {
+    CompoundNBT tag = new CompoundNBT();
     tag.putString(TEXT_KEY, this.text);
     tag.putBoolean(CHECKED_KEY, this.checked);
     return tag;
@@ -109,7 +108,7 @@ public class ToDoListItem implements Cloneable, Comparable<ToDoListItem> {
   }
 
   @Override
-  public int compareTo(@NotNull ToDoListItem o) {
+  public int compareTo(ToDoListItem o) {
     return this.getText().compareTo(o.getText());
   }
 }

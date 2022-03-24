@@ -1,13 +1,13 @@
 package net.darmo_creations.build_utils;
 
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.Vec3i;
-import net.minecraft.network.chat.Component;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.state.properties.Property;
+import net.minecraft.block.BlockState;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.state.Property;
+import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.vector.Vector3i;
+import net.minecraft.util.text.IFormattableTextComponent;
+import net.minecraft.world.World;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -31,8 +31,8 @@ public final class Utils {
    * @param <T>             Tile entity’s type.
    * @return The tile entity if found, an empty optional otherwise.
    */
-  public static <T extends BlockEntity> Optional<T> getTileEntity(Class<T> tileEntityClass, Level world, BlockPos pos) {
-    BlockEntity te = world.getBlockEntity(pos);
+  public static <T extends TileEntity> Optional<T> getTileEntity(Class<T> tileEntityClass, World world, BlockPos pos) {
+    TileEntity te = world.getBlockEntity(pos);
     if (tileEntityClass.isInstance(te)) {
       return Optional.of(tileEntityClass.cast(te));
     }
@@ -81,7 +81,7 @@ public final class Utils {
    * @param player The player.
    * @param text   Message’s text.
    */
-  public static void sendMessage(final Level world, Player player, final Component text) {
+  public static void sendMessage(final World world, PlayerEntity player, final IFormattableTextComponent text) {
     if (world.isClientSide()) {
       //noinspection ConstantConditions
       player.sendMessage(text, null);
@@ -91,14 +91,14 @@ public final class Utils {
   /**
    * Get the blocks length along each axis of the volume defined by the given positions.
    *
-   * @return A {@link Vec3i} object. Each axis holds the number of blocks along itself.
+   * @return A {@link Vector3i} object. Each axis holds the number of blocks along itself.
    */
-  public static Vec3i getLengths(BlockPos pos1, BlockPos pos2) {
+  public static Vector3i getLengths(BlockPos pos1, BlockPos pos2) {
     Pair<BlockPos, BlockPos> positions = normalizePositions(pos1, pos2);
     BlockPos posMin = positions.getLeft();
     BlockPos posMax = positions.getRight();
 
-    return new Vec3i(
+    return new Vector3i(
         posMax.getX() - posMin.getX() + 1,
         posMax.getY() - posMin.getY() + 1,
         posMax.getZ() - posMin.getZ() + 1
@@ -108,12 +108,12 @@ public final class Utils {
   /**
    * Get the blocks area of each face of the volume defined by the given positions.
    *
-   * @return A {@link Vec3i} object. Each axis holds the area of the face perpendicular to itself.
+   * @return A {@link Vector3i} object. Each axis holds the area of the face perpendicular to itself.
    */
-  public static Vec3i getAreas(BlockPos pos1, BlockPos pos2) {
-    Vec3i size = getLengths(pos1, pos2);
+  public static Vector3i getAreas(BlockPos pos1, BlockPos pos2) {
+    Vector3i size = getLengths(pos1, pos2);
 
-    return new Vec3i(
+    return new Vector3i(
         size.getZ() * size.getY(),
         size.getX() * size.getZ(),
         size.getX() * size.getY()
@@ -124,7 +124,7 @@ public final class Utils {
    * Get the total number of blocks inside the volume defined by the given positions.
    */
   public static int getVolume(BlockPos pos1, BlockPos pos2) {
-    Vec3i size = getLengths(pos1, pos2);
+    Vector3i size = getLengths(pos1, pos2);
     return size.getX() * size.getY() * size.getZ();
   }
 

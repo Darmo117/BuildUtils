@@ -1,6 +1,6 @@
 package net.darmo_creations.build_utils.blocks;
 
-import net.minecraft.world.level.block.Block;
+import net.minecraft.block.Block;
 
 import java.util.Arrays;
 import java.util.LinkedList;
